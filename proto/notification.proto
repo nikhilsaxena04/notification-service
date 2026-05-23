@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "notification-service/proto/notificationpb";
+
+import "google/protobuf/timestamp.proto";
+
+// ──────────────────────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────────────────────
+
+// Channel discriminator — drives which provider the router selects.
+enum Channel {
+  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_EMAIL       = 1;
+  CHANNEL_SMS         = 2;
+  CHANNEL_PUSH        = 3;
+}
+
+// Priority controls queue ordering and retry budgets.
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW         = 1;
+  PRIORITY_NORMAL      = 2;
+  PRIORITY_HIGH        = 3;
+  PRIORITY_CRITICAL    = 4;
+}
+
+// Terminal status of a dispatched notification.
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACCEPTED    = 1;  // Enqueued to Redis successfully.
+  STATUS_DELIVERED   = 2;  // Provider confirmed delivery.
+  STATUS_FAILED      = 3;  // All retries exhausted; moved to DLQ.
+}
+
+// ──────────────────────────────────────────────────────────────
+// Channel-specific payloads
+// ──────────────────────────────────────────────────────────────
+
+message EmailPayload {
+  string from        = 1;
+  repeated string to = 2;
+  repeated string cc = 3;
+  string subject     = 4;
+  string body_html   = 5;
+  string body_text   = 6;  // Plain-text fallback.
+}
+
+message SMSPayload {
+  string from           = 1;
+  string to             = 2;
+  string body            = 3;
+}
+
+message PushPayload {
+  string device_token   = 1;
+  string title           = 2;
+  string body            = 3;
+  map<string, string> data = 4;  // Arbitrary k/v passed to FCM/APNs.
+}
+
+// ──────────────────────────────────────────────────────────────
+// Top-level request / response
+// ──────────────────────────────────────────────────────────────
+
+message SendNotificationRequest {
+  // Client-provided idempotency key (UUIDv4).
+  string idempotency_key = 1;
+
+  Channel  channel  = 2;
+  Priority priority = 3;
+
+  // Exactly one of these must be set, matching `channel`.
+  oneof payload {
+    EmailPayload email = 10;
+    SMSPayload   sms   = 11;
+    PushPayload  push  = 12;
+  }
+
+  // Optional caller-scoped metadata for tracing / filtering.
+  map<string, string> metadata = 20;
+}
+
+message SendNotificationResponse {
+  // Server-assigned job ID (UUIDv7, monotonic).
+  string job_id = 1;
+  Status status = 2;
+  google.protobuf.Timestamp accepted_at = 3;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Batch variant (fire up to 100 notifications in one RPC)
+// ──────────────────────────────────────────────────────────────
+
+message BatchSendRequest {
+  repeated SendNotificationRequest notifications = 1;
+}
+
+message BatchSendResponse {
+  repeated SendNotificationResponse results = 1;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Internal: worker → router dispatch
+// ──────────────────────────────────────────────────────────────
+
+message DispatchRequest {
+  string job_id   = 1;
+  Channel channel = 2;
+
+  oneof payload {
+    EmailPayload email = 10;
+    SMSPayload   sms   = 11;
+    PushPayload  push  = 12;
+  }
+
+  int32 attempt = 20;  // Current retry attempt (0-indexed).
+}
+
+message DispatchResponse {
+  bool   success       = 1;
+  string error_message = 2;
+  string provider_id   = 3;  // Downstream provider reference ID.
+}
+
+// ──────────────────────────────────────────────────────────────
+// Service definitions
+// ──────────────────────────────────────────────────────────────
+
+// Exposed by api-service (external ingress).
+service NotificationAPI {
+  rpc Send      (SendNotificationRequest) returns (SendNotificationResponse);
+  rpc BatchSend (BatchSendRequest)        returns (BatchSendResponse);
+}
+
+// Exposed by notification-router (internal, worker → router).
+service NotificationRouter {
+  rpc Dispatch (DispatchRequest) returns (DispatchResponse);
+}
