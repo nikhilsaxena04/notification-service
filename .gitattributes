@@ -1,0 +1,6 @@
+# Mark generated files so GitHub Linguist doesn't count them towards language stats or show them in diffs by default.
+*.pb.go linguist-generated=true
+*._grpc.pb.go linguist-generated=true
+
+# Ignore test output html files if any get checked in
+*.html linguist-vendored=true
