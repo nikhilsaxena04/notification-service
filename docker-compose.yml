@@ -41,6 +41,91 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── Jaeger (Distributed Tracing) ─────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: ns-jaeger
+    ports:
+      - "16686:16686" # UI
+      - "4317:4317"   # OTLP gRPC
+    restart: unless-stopped
+
+  # ── Grafana (Dashboards) ─────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ns-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./deployments/grafana/provisioning:/etc/grafana/provisioning
+      - ./deployments/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ── API Service ──────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile.api
+    container_name: ns-api
+    ports:
+      - "50051:50051"
+      - "8081:8081"
+    environment:
+      - NS_REDIS_ADDR=redis:6379
+      - NS_GRPC_PORT_API=50051
+      - NS_METRICS_PORT_API=8081
+      - NS_API_KEY=test-api-key
+      - NS_OTLP_ENDPOINT=jaeger:4317
+    depends_on:
+      redis:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+
+  # ── Notification Router ──────────────────────────────────────
+  router:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile.router
+    container_name: ns-router
+    ports:
+      - "50052:50052"
+      - "8083:8083"
+    environment:
+      - NS_GRPC_PORT_ROUTER=50052
+      - NS_METRICS_PORT_ROUTER=8083
+      - NS_OTLP_ENDPOINT=jaeger:4317
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  # ── Worker Service ───────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile.worker
+    container_name: ns-worker
+    ports:
+      - "8082:8082"
+    environment:
+      - NS_REDIS_ADDR=redis:6379
+      - NS_GRPC_PORT_ROUTER=router:50052
+      - NS_METRICS_PORT_WORKER=8082
+      - NS_OTLP_ENDPOINT=jaeger:4317
+    depends_on:
+      redis:
+        condition: service_healthy
+      router:
+        condition: service_started
+      jaeger:
+        condition: service_started
+
 volumes:
   redis-data:
   prometheus-data:

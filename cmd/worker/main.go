@@ -2,81 +2,110 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
-	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"notification-service/internal/worker"
 	"notification-service/pkg/config"
+	"notification-service/pkg/metrics"
 	"notification-service/pkg/queue"
+	"notification-service/pkg/tracing"
 	pb "notification-service/proto/notificationpb"
 )
 
 func main() {
-	// 1. Load config
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	// 2. Setup structured logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
-
-	// 3. Initialize Redis client
-	// Set PoolSize to at least WORKER_CONCURRENCY + 5 to avoid connection exhaustion during blocking pops
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisAddr,
-		PoolSize: cfg.WorkerConcurrency + 5,
-	})
-	ctx := context.Background()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		logger.Error("Failed to connect to Redis", "error", err)
+		slog.Error("Failed to load config", "error", err)
 		os.Exit(1)
 	}
-	defer rdb.Close()
-	logger.Info("Connected to Redis", "addr", cfg.RedisAddr)
 
-	// 4. Connect to Notification Router gRPC service
-	routerAddr := cfg.GRPCPortRouter
-	if _, _, err := net.SplitHostPort(routerAddr); err != nil {
-		routerAddr = ":" + cfg.GRPCPortRouter
+	// Initialize OpenTelemetry Tracing
+	tp, err := tracing.InitTracer(context.Background(), "worker-service", cfg.OTLPEndpoint)
+	if err != nil {
+		slog.Error("Failed to initialize tracer", "error", err)
+	} else {
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				slog.Error("Error shutting down tracer", "error", err)
+			}
+		}()
 	}
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAddr,
+	})
+	defer redisClient.Close()
+
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		slog.Error("Failed to connect to Redis", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("Connected to Redis", "addr", cfg.RedisAddr)
+
 	conn, err := grpc.Dial(
-		routerAddr, 
+		cfg.GRPCPortRouter,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 	)
 	if err != nil {
-		logger.Error("Failed to dial router service", "error", err)
+		slog.Error("Failed to connect to router", "error", err)
 		os.Exit(1)
 	}
 	defer conn.Close()
+
 	routerClient := pb.NewNotificationRouterClient(conn)
+	consumer := queue.NewConsumer(redisClient)
+	dlq := queue.NewDLQ(redisClient)
+	dispatcher := worker.NewDispatcher(routerClient, dlq)
+	pool := worker.NewPool(consumer, dispatcher, cfg.WorkerConcurrency)
 
-	// 5. Wire dependencies
-	consumer := queue.NewConsumer(rdb)
-	dlq := queue.NewDLQ(rdb)
-	dispatcher := worker.NewDispatcher(routerClient, consumer, dlq, logger)
-	pool := worker.NewPool(cfg.WorkerConcurrency, consumer, dispatcher, logger)
+	go func() {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		slog.Info("Starting Worker metrics server", "port", cfg.MetricsPortWorker)
+		if err := http.ListenAndServe(":"+cfg.MetricsPortWorker, mux); err != nil && err != http.ErrServerClosed {
+			slog.Error("Worker metrics server failed", "error", err)
+		}
+	}()
 
-	// 6. Start the worker pool
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			ctx := context.Background()
+			pending, _ := redisClient.LLen(ctx, "notifications:pending").Result()
+			processing, _ := redisClient.LLen(ctx, "notifications:processing").Result()
+			dlq, _ := redisClient.LLen(ctx, "notifications:dlq").Result()
+
+			metrics.QueueDepth.WithLabelValues("pending").Set(float64(pending))
+			metrics.QueueDepth.WithLabelValues("processing").Set(float64(processing))
+			metrics.QueueDepth.WithLabelValues("dlq").Set(float64(dlq))
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	slog.Info("Starting worker pool", "concurrency", cfg.WorkerConcurrency)
 	pool.Start(ctx)
 
-	// 7. Wait for termination signal
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	sig := <-sigChan
-	logger.Info("Received termination signal", "signal", sig.String())
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-	// 8. Graceful shutdown
+	slog.Info("Shutting down worker gracefully...")
+	cancel()
 	pool.Stop()
-	logger.Info("Worker service shutdown complete")
+	slog.Info("Worker stopped")
 }

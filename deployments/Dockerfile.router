@@ -1,0 +1,30 @@
+# Stage 1: Build the binary
+FROM golang:alpine AS builder
+
+WORKDIR /app
+
+# Copy go mod and sum files
+COPY go.mod go.sum ./
+
+# Download all dependencies.
+RUN go mod download
+
+# Copy the source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o router-service ./cmd/router
+
+# Stage 2: Build the runtime image
+FROM gcr.io/distroless/static:nonroot
+
+WORKDIR /
+
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/router-service .
+
+# Expose gRPC port and metrics port
+EXPOSE 50052 8083
+
+# Command to run the executable
+ENTRYPOINT ["/router-service"]

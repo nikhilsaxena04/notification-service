@@ -96,36 +96,48 @@ Sequential execution roadmap for the Developer agent. Complete each phase fully 
 
 ## Phase 5: Observability (Prometheus Metrics)
 
-- [ ] Create `pkg/metrics/metrics.go`:
-  - [ ] `ns_jobs_enqueued_total` — Counter, labels: `channel`, `priority`
-  - [ ] `ns_jobs_processed_total` — Counter, labels: `channel`, `status`
-  - [ ] `ns_jobs_dlq_total` — Counter, labels: `channel`
-  - [ ] `ns_queue_depth` — Gauge, labels: `queue` (pending/processing/dlq)
-  - [ ] `ns_job_duration_seconds` — Histogram, labels: `channel`
-  - [ ] `ns_dispatch_duration_seconds` — Histogram, labels: `channel`, `provider`
-- [ ] Instrument `api-service`: increment `enqueued_total` on successful `RPUSH`
-- [ ] Instrument `worker-service`: observe `job_duration`, increment `processed_total`
-- [ ] Instrument `notification-router`: observe `dispatch_duration`
-- [ ] Add `/metrics` HTTP endpoint to each service via `promhttp.Handler()` (side-car HTTP server alongside gRPC)
-- [ ] Add background goroutine to `worker-service` polling `LLEN` for `queue_depth` gauge
-- [ ] Verify: `docker compose up`, send requests, confirm metrics appear at `localhost:9090`
+- [x] Create `pkg/metrics/metrics.go`:
+  - [x] `ns_jobs_enqueued_total` — Counter, labels: `channel`, `priority`
+  - [x] `ns_jobs_processed_total` — Counter, labels: `channel`, `status`
+  - [x] `ns_jobs_dlq_total` — Counter, labels: `channel`
+  - [x] `ns_queue_depth` — Gauge, labels: `queue` (pending/processing/dlq)
+  - [x] `ns_job_duration_seconds` — Histogram, labels: `channel`
+  - [x] `ns_dispatch_duration_seconds` — Histogram, labels: `channel`, `provider`
+- [x] Instrument `api-service`: increment `enqueued_total` on successful `RPUSH`
+- [x] Instrument `worker-service`: observe `job_duration`, increment `processed_total`
+- [x] Instrument `notification-router`: observe `dispatch_duration`
+- [x] Add `/metrics` HTTP endpoint to each service via `promhttp.Handler()` (side-car HTTP server alongside gRPC)
+- [x] Add background goroutine to `worker-service` polling `LLEN` for `queue_depth` gauge
+- [x] Verify: `docker compose up`, send requests, confirm metrics appear at `localhost:9090`
 
 ---
 
 ## Phase 6: Production (Docker + Kubernetes)
 
-- [ ] Create `deployments/Dockerfile.api` — multi-stage build (Go builder → distroless/static)
-- [ ] Create `deployments/Dockerfile.worker` — multi-stage build
-- [ ] Create `deployments/Dockerfile.router` — multi-stage build
-- [ ] Add all three services to `docker-compose.yml` with `build:` directives for local testing
-- [ ] Verify: `docker compose up --build` — all services start, send notification end-to-end
-- [ ] Create `deployments/k8s/api-deployment.yaml` — Deployment + Service (ClusterIP, port 50051)
-- [ ] Create `deployments/k8s/worker-deployment.yaml` — Deployment (no Service, internal consumer)
-- [ ] Create `deployments/k8s/router-deployment.yaml` — Deployment + Service (ClusterIP, port 50052)
-- [ ] Create `deployments/k8s/redis-deployment.yaml` — StatefulSet + PVC for Redis
-- [ ] Create `deployments/k8s/hpa.yaml` — HPA for worker-service based on CPU / custom queue-depth metric
-- [ ] Create `.github/workflows/ci.yml` — lint, test, build Docker images on push
-- [ ] Verify: `minikube start`, `kubectl apply -f deployments/k8s/`, end-to-end smoke test
+- [x] Create `deployments/Dockerfile.api` — multi-stage build (Go builder → distroless/static)
+- [x] Create `deployments/Dockerfile.worker` — multi-stage build
+- [x] Create `deployments/Dockerfile.router` — multi-stage build
+- [x] Add all three services to `docker-compose.yml` with `build:` directives for local testing
+- [x] Verify: `docker compose up --build` — all services start, send notification end-to-end
+- [x] Create `deployments/k8s/api-deployment.yaml` — Deployment + Service (ClusterIP, port 50051)
+- [x] Create `deployments/k8s/worker-deployment.yaml` — Deployment (no Service, internal consumer)
+- [x] Create `deployments/k8s/router-deployment.yaml` — Deployment + Service (ClusterIP, port 50052)
+- [x] Create `deployments/k8s/redis-deployment.yaml` — StatefulSet + PVC for Redis
+- [x] Create `deployments/k8s/hpa.yaml` — HPA for worker-service based on CPU / custom queue-depth metric
+- [x] Create `.github/workflows/ci.yml` — lint, test, build Docker images on push
+- [x] Verify: `minikube start`, `kubectl apply -f deployments/k8s/`, end-to-end smoke test
+
+---
+
+## Phase 7: Polish & Showcase (Tracing, Auth, Load Testing)
+
+- [x] Add Jaeger and Grafana to `docker-compose.yml`
+- [x] Provision Prometheus datasource and basic Grafana Dashboard
+- [x] Integrate OpenTelemetry (`otelgrpc`) tracing into all three microservices
+- [x] Add `TraceCarrier` to `Job` struct to propagate trace IDs across Redis `RPUSH`/`BLMOVE`
+- [x] Create a gRPC Auth Interceptor and require static API key (`NS_API_KEY`)
+- [x] Create `scripts/benchmark.sh` using `ghz` to generate load
+- [x] Verify: Run load test and view traces in Jaeger and load spikes in Grafana
 
 ---
 

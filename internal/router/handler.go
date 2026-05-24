@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
+	"notification-service/pkg/metrics"
 	pb "notification-service/proto/notificationpb"
 )
 
@@ -33,23 +35,34 @@ func (h *Handler) Dispatch(ctx context.Context, req *pb.DispatchRequest) (*pb.Di
 	h.logger.Debug("Received dispatch request", "job_id", req.JobId, "channel", req.Channel.String(), "attempt", req.Attempt)
 
 	var providerID string
+	var providerName string
 	var err error
+
+	start := time.Now()
+	defer func() {
+		if providerName != "" {
+			metrics.DispatchDurationSeconds.WithLabelValues(req.Channel.String(), providerName).Observe(time.Since(start).Seconds())
+		}
+	}()
 
 	switch req.Channel {
 	case pb.Channel_CHANNEL_EMAIL:
 		if req.GetEmail() == nil {
 			return &pb.DispatchResponse{Success: false, ErrorMessage: "missing email payload"}, nil
 		}
+		providerName = "MockEmailProvider"
 		providerID, err = h.emailProvider.Send(ctx, req)
 	case pb.Channel_CHANNEL_SMS:
 		if req.GetSms() == nil {
 			return &pb.DispatchResponse{Success: false, ErrorMessage: "missing sms payload"}, nil
 		}
+		providerName = "MockSMSProvider"
 		providerID, err = h.smsProvider.Send(ctx, req)
 	case pb.Channel_CHANNEL_PUSH:
 		if req.GetPush() == nil {
 			return &pb.DispatchResponse{Success: false, ErrorMessage: "missing push payload"}, nil
 		}
+		providerName = "MockPushProvider"
 		providerID, err = h.pushProvider.Send(ctx, req)
 	default:
 		return &pb.DispatchResponse{

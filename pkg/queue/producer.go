@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 var (
@@ -39,11 +41,14 @@ func (p *Producer) Enqueue(ctx context.Context, job *Job) error {
 	}
 
 	// 2. Marshal job to JSON
+	job.TraceCarrier = make(map[string]string)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(job.TraceCarrier))
+
 	jobJSON, err := json.Marshal(job)
 	if err != nil {
 		// Cleanup idempotency key if marshal fails
 		p.client.Del(ctx, idempKey)
-		return err
+		return fmt.Errorf("failed to marshal job: %w", err)
 	}
 
 	// 3. RPUSH to notifications:pending

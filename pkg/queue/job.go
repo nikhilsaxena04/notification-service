@@ -101,9 +101,13 @@ type Job struct {
 	Push  *PushPayload  `json:"push,omitempty"`
 
 	// ── Retry state ───────────────────────────────────────────
-	Attempt    int       `json:"attempt"`
-	MaxRetries int       `json:"max_retries"`
+	Attempt     int       `json:"attempt"`
+	MaxRetries  int       `json:"max_retries"`
 	NextRetryAt time.Time `json:"next_retry_at,omitempty"`
+	Error       string    `json:"error,omitempty"`
+
+	// ── Distributed Tracing ───────────────────────────────────
+	TraceCarrier map[string]string `json:"trace_carrier,omitempty"`
 
 	// ── Metadata ──────────────────────────────────────────────
 	// Caller-scoped k/v for tracing and filtering.

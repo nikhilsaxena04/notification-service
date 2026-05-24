@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"notification-service/pkg/metrics"
 	"notification-service/pkg/queue"
 	"notification-service/pkg/validator"
 	pb "notification-service/proto/notificationpb"
@@ -90,6 +91,9 @@ func (s *Service) SendNotification(ctx context.Context, req *pb.SendNotification
 		}
 		return nil, err
 	}
+
+	// Instrument successful enqueue
+	metrics.JobsEnqueuedTotal.WithLabelValues(req.Channel.String(), req.Priority.String()).Inc()
 
 	// 5. Return success
 	return &pb.SendNotificationResponse{

@@ -1,0 +1,30 @@
+# Stage 1: Build the binary
+FROM golang:alpine AS builder
+
+WORKDIR /app
+
+# Copy go mod and sum files
+COPY go.mod go.sum ./
+
+# Download all dependencies.
+RUN go mod download
+
+# Copy the source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-service ./cmd/api
+
+# Stage 2: Build the runtime image
+FROM gcr.io/distroless/static:nonroot
+
+WORKDIR /
+
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/api-service .
+
+# Expose gRPC port and metrics port
+EXPOSE 50051 8081
+
+# Command to run the executable
+ENTRYPOINT ["/api-service"]

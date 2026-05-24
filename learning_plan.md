@@ -128,3 +128,56 @@ A running log of key concepts and design patterns introduced in each phase of th
 #### 20. `grpc.GracefulStop()` vs `Stop()`
 - `GracefulStop()` closes the listener (no new connections) then blocks until all active RPCs complete — correct for shutdown in a stateful service handling in-flight dispatches.
 - `Stop()` immediately terminates all connections regardless of in-flight state — appropriate only for test teardown or forced kills where data integrity is not a concern.
+
+---
+
+## Phase 5: Observability (Prometheus Metrics)
+
+> **Goal:** Expose critical application metrics via HTTP endpoints to enable scraping by Prometheus and visualization of distributed state.
+
+### Concepts Introduced
+
+#### 21. RED Method (Rate, Errors, Duration)
+- **Rate & Errors:** Captured via `ns_jobs_processed_total` and `ns_jobs_dlq_total` Counters. By observing the rate of `status="success"` vs `status="error"` over time (`rate(...)`), we get throughput and error percentage.
+- **Duration:** Captured via `ns_job_duration_seconds` and `ns_dispatch_duration_seconds` Histograms. Histograms sort observations into buckets to calculate percentiles (e.g., p95 latency) accurately.
+
+#### 22. Prometheus Metric Types
+- **Counters (`CounterVec`)**: Monotonically increasing values (e.g., total jobs enqueued). Resets to 0 only on process restart. Useful for calculating rates.
+- **Gauges (`GaugeVec`)**: Values that can go up and down (e.g., current queue depth). Represents an instantaneous snapshot of state.
+- **Histograms (`HistogramVec`)**: Samples observations and counts them in configurable buckets. Essential for latency calculations where average/mean is misleading due to outliers.
+
+#### 23. Sidecar HTTP Servers for Telemetry
+- Exposing an HTTP metrics server (`promhttp.Handler()`) alongside a gRPC server within the same process.
+- Runs in an isolated background goroutine on a separate port (`8081` for API, `8082` for Worker, `8083` for Router).
+- Prevents external ingress load from impacting the ability of the observability system to scrape internal telemetry.
+
+#### 24. Active Polling vs Event-Driven Metrics
+- Tracking `queue_depth` is challenging because Redis lists mutate rapidly and without notifying external clients.
+- We implemented an **Active Poller**: a background goroutine in `worker-service` that executes `LLEN` every 5 seconds and updates the Gauge.
+- This decoupling prevents adding Redis latency directly into the hot path (e.g., we don't query `LLEN` every time we enqueue/dequeue) while still providing sufficient temporal resolution for HPA (Horizontal Pod Autoscaling) scaling decisions.
+
+---
+
+## Phase 6: Production (Docker & Kubernetes)
+
+> **Goal:** Package the microservices for cloud-native deployment using Docker, define cluster orchestration using Kubernetes, and set up a CI pipeline.
+
+### Concepts Introduced
+
+#### 25. Multi-stage Docker Builds & Distroless
+- **Stage 1 (Builder):** Uses a heavy `golang:alpine` image with SDKs/tools to compile the binary. `CGO_ENABLED=0` ensures a statically linked binary without C library dependencies.
+- **Stage 2 (Runtime):** Uses `gcr.io/distroless/static:nonroot`, which contains only the bare minimum runtime dependencies (like CA certificates) and no shell or package manager.
+- **Benefit:** Drastically reduces the attack surface area and the final image size (often <20MB), making deployments faster and more secure.
+
+#### 26. Kubernetes Architectural Separation
+- **StatefulSet vs Deployment:** Redis requires persistent state (AOF log), so it uses a `StatefulSet` + `PersistentVolumeClaim`. The Go services are stateless and use `Deployment`s, which can be freely killed and restarted on different nodes.
+- **Headless Worker:** The `worker-service` deployment does not have an accompanying `Service`. It actively consumes from Redis and makes outbound gRPC calls. Since no external system dials into the worker, exposing a cluster IP is unnecessary (except for Prometheus scraping, which can discover pods directly or via a headless service).
+
+#### 27. Horizontal Pod Autoscaling (HPA)
+- Autoscaling is configured via the `HorizontalPodAutoscaler` resource.
+- Our initial implementation triggers scaling based on CPU `Utilization` (e.g., target 70%).
+- As the dispatcher loops unblock under high load (due to an influx of jobs in Redis), CPU utilization rises, prompting the HPA to dynamically inject more `worker-service` pods, proportionally increasing concurrent dequeues.
+
+#### 28. CI Pipeline Isolation via Service Containers
+- In GitHub Actions (`.github/workflows/ci.yml`), tests involving Redis are notoriously flaky if a real Redis instance isn't available.
+- Using `services: redis:` spins up an isolated, ephemeral Redis container specifically for the job lifecycle, ensuring `go test -race ./...` has a real queue to test producer/consumer/DLQ integration without external infrastructure dependencies.

@@ -1,0 +1,42 @@
+{
+  "title": "Notification Service Metrics",
+  "uid": "ns-dashboard",
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Queue Depth",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "ns_queue_depth", "legendFormat": "{{queue}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Job Throughput (per sec)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "rate(ns_jobs_processed_total[1m])", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Job Processing Duration (P95)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(ns_job_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P95 Duration" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Enqueue Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "rate(ns_jobs_enqueued_total[1m])", "legendFormat": "{{channel}}" }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "timezone": "browser",
+  "refresh": "5s"
+}

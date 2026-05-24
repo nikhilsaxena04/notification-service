@@ -6,8 +6,12 @@ import (
 	"math/rand"
 	"time"
 
+	"notification-service/pkg/metrics"
 	"notification-service/pkg/queue"
 	pb "notification-service/proto/notificationpb"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // Dispatcher is responsible for mapping jobs to gRPC router calls and managing retries.
@@ -65,6 +69,23 @@ func getBackoff(priority queue.Priority, attempt int) time.Duration {
 
 // Dispatch executes a single job delivery and handles success/failure paths.
 func (d *Dispatcher) Dispatch(ctx context.Context, job *queue.Job) {
+	// Extract trace context
+	var tracerCtx context.Context
+	if job.TraceCarrier != nil {
+		tracerCtx = otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(job.TraceCarrier))
+	} else {
+		tracerCtx = ctx
+	}
+
+	start := time.Now()
+	// Start an internal span for the dispatch attempt
+	tracerCtx, span := otel.Tracer("worker-service").Start(tracerCtx, "Dispatcher.Dispatch")
+	defer span.End()
+
+	defer func() {
+		metrics.JobDurationSeconds.WithLabelValues(string(job.Channel)).Observe(time.Since(start).Seconds())
+	}()
+
 	// 1. Map queue.Job to pb.DispatchRequest
 	req := &pb.DispatchRequest{
 		JobId:   job.JobID,
@@ -110,10 +131,11 @@ func (d *Dispatcher) Dispatch(ctx context.Context, job *queue.Job) {
 	}
 
 	// 2. Call the router via gRPC
-	resp, err := d.routerClient.Dispatch(ctx, req)
+	resp, err := d.routerClient.Dispatch(tracerCtx, req)
 	
 	// 3. Handle Success
 	if err == nil && resp.Success {
+		metrics.JobsProcessedTotal.WithLabelValues(string(job.Channel), "success").Inc()
 		d.logger.Info("Job dispatched successfully", "job_id", job.JobID, "provider_id", resp.ProviderId)
 		if ackErr := d.consumer.Ack(ctx, job); ackErr != nil {
 			d.logger.Error("Failed to ACK successful job", "job_id", job.JobID, "error", ackErr)
@@ -136,6 +158,8 @@ func (d *Dispatcher) Dispatch(ctx context.Context, job *queue.Job) {
 			d.logger.Error("Failed to escalate job to DLQ", "job_id", retryJob.JobID, "error", err)
 			return // Do NOT Ack if DLQ push fails, to avoid losing the message completely
 		}
+
+		metrics.JobsDLQTotal.WithLabelValues(string(job.Channel)).Inc()
 
 		// 2. ACK from processing only if DLQ escalation succeeded
 		if ackErr := d.consumer.Ack(ctx, job); ackErr != nil {
