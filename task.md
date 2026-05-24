@@ -45,52 +45,52 @@ Sequential execution roadmap for the Developer agent. Complete each phase fully 
 
 ---
 
-## Phase 3: The Worker Pool (worker-service)
+## Phase 3: The Worker Pool (worker-service) ✅
 
-- [ ] Create `pkg/queue/consumer.go`:
-  - [ ] `Dequeue(ctx) (*Job, error)` — `BLMOVE notifications:pending notifications:processing LEFT RIGHT 0`
-  - [ ] `Ack(ctx, jobID string) error` — `LREM notifications:processing 1 <job_json>`
-  - [ ] `Requeue(ctx, job *Job) error` — `RPUSH notifications:pending` (after backoff update)
-- [ ] Create `pkg/queue/queue_test.go` — table-driven tests for producer + consumer with a real Redis (testcontainers or miniredis)
-- [ ] Create `internal/worker/pool.go`:
-  - [ ] `Pool` struct with configurable concurrency (`WORKER_CONCURRENCY`)
-  - [ ] `Start(ctx)` — launches N goroutines, each running the dequeue → dispatch → ACK loop
-  - [ ] `Stop()` — cancels context, `sync.WaitGroup.Wait()` for clean drain
-  - [ ] Zero leaked goroutines on shutdown
-- [ ] Create `internal/worker/dispatcher.go`:
-  - [ ] Per-job dispatch logic: unmarshal → call router gRPC `Dispatch` → handle response
-  - [ ] Retry backoff: `min(base * 2^attempt, max_backoff) + jitter`
-  - [ ] On success: `consumer.Ack()`
-  - [ ] On transient failure (attempt < max): update `Attempt`, `NextRetryAt`, `consumer.Requeue()`
-  - [ ] On terminal failure (attempt >= max): escalate to DLQ (Phase 4)
-- [ ] Create `cmd/worker/main.go`:
-  - [ ] Parse config from env
-  - [ ] Initialize Redis client + gRPC client to notification-router
-  - [ ] Wire pool → dispatcher → consumer (hexagonal DI)
-  - [ ] Start pool, block until SIGINT/SIGTERM, drain gracefully
-- [ ] Unit test: `pool_test.go` — verify pool starts N goroutines, shuts down cleanly, no goroutine leaks
+- [x] Create `pkg/queue/consumer.go`:
+  - [x] `Dequeue(ctx) (*Job, error)` — `BLMOVE notifications:pending notifications:processing LEFT RIGHT 0`
+  - [x] `Ack(ctx, jobID string) error` — `LREM notifications:processing 1 <job_json>`
+  - [x] `Requeue(ctx, job *Job) error` — `RPUSH notifications:pending` (after backoff update)
+- [x] Create `pkg/queue/queue_test.go` — table-driven tests for producer + consumer with a real Redis (testcontainers or miniredis)
+- [x] Create `internal/worker/pool.go`:
+  - [x] `Pool` struct with configurable concurrency (`WORKER_CONCURRENCY`)
+  - [x] `Start(ctx)` — launches N goroutines, each running the dequeue → dispatch → ACK loop
+  - [x] `Stop()` — cancels context, `sync.WaitGroup.Wait()` for clean drain
+  - [x] Zero leaked goroutines on shutdown
+- [x] Create `internal/worker/dispatcher.go`:
+  - [x] Per-job dispatch logic: unmarshal → call router gRPC `Dispatch` → handle response
+  - [x] Retry backoff: `min(base * 2^attempt, max_backoff) + jitter`
+  - [x] On success: `consumer.Ack()`
+  - [x] On transient failure (attempt < max): update `Attempt`, `NextRetryAt`, `consumer.Requeue()`
+  - [x] On terminal failure (attempt >= max): escalate to DLQ (Phase 4)
+- [x] Create `cmd/worker/main.go`:
+  - [x] Parse config from env
+  - [x] Initialize Redis client + gRPC client to notification-router
+  - [x] Wire pool → dispatcher → consumer (hexagonal DI)
+  - [x] Start pool, block until SIGINT/SIGTERM, drain gracefully
+- [x] Unit test: `pool_test.go` — verify pool starts N goroutines, shuts down cleanly, no goroutine leaks
 
 ---
 
-## Phase 4: Dispatch & DLQ (notification-router)
+## Phase 4: Dispatch & DLQ (notification-router) ✅
 
-- [ ] Create `internal/router/provider.go`:
-  - [ ] `Provider` interface: `Send(ctx, channel, payload) (providerID string, err error)`
-  - [ ] `MockEmailProvider` — logs + returns success (simulates Mailtrap)
-  - [ ] `MockSMSProvider` — logs + returns success (simulates Twilio)
-  - [ ] `MockPushProvider` — logs + returns success (simulates FCM)
-- [ ] Create `internal/router/handler.go`:
-  - [ ] gRPC `NotificationRouterServer` implementation
-  - [ ] Switch on `channel` → select provider → call `provider.Send()`
-  - [ ] Map provider result to `DispatchResponse`
-- [ ] Create `cmd/router/main.go`:
-  - [ ] Parse config, start gRPC server, register handler
-  - [ ] Graceful shutdown on SIGINT/SIGTERM
-- [ ] Create `internal/router/provider_test.go` — table-driven tests for provider selection and error handling
-- [ ] Add DLQ escalation to `internal/worker/dispatcher.go`:
-  - [ ] `pkg/queue/dlq.go` — `Escalate(ctx, job *Job) error` → `RPUSH notifications:dlq`
-  - [ ] Wire into dispatcher: on `attempt >= max_retries`, call `Escalate()` + `Ack()`
-- [ ] End-to-end test: `api-service` → Redis → `worker-service` → `notification-router` (all three processes)
+- [x] Create `internal/router/provider.go`:
+  - [x] `Provider` interface: `Send(ctx, channel, payload) (providerID string, err error)`
+  - [x] `MockEmailProvider` — logs + returns success (simulates Mailtrap)
+  - [x] `MockSMSProvider` — logs + returns success (simulates Twilio)
+  - [x] `MockPushProvider` — logs + returns success (simulates FCM)
+- [x] Create `internal/router/handler.go`:
+  - [x] gRPC `NotificationRouterServer` implementation
+  - [x] Switch on `channel` → select provider → call `provider.Send()`
+  - [x] Map provider result to `DispatchResponse`
+- [x] Create `cmd/router/main.go`:
+  - [x] Parse config, start gRPC server, register handler
+  - [x] Graceful shutdown on SIGINT/SIGTERM
+- [x] Create `internal/router/provider_test.go` — table-driven tests for provider selection and error handling
+- [x] Add DLQ escalation to `internal/worker/dispatcher.go`:
+  - [x] `pkg/queue/dlq.go` — `Escalate(ctx, job *Job) error` → `RPUSH notifications:dlq`
+  - [x] Wire into dispatcher: on `attempt >= max_retries`, call `Escalate()` + `Ack()`
+- [x] End-to-end test: `api-service` → Redis → `worker-service` → `notification-router` (all three processes)
 
 ---
 

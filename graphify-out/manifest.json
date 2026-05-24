@@ -1,0 +1,192 @@
+{
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/.mcp.json": {
+    "mtime": 1779544798.812034,
+    "ast_hash": "f1a18479cbbfe4deb5c8fe8b765fb5db",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/notification.pb.go": {
+    "mtime": 1779546072.6564565,
+    "ast_hash": "cad4bbb010c369b3a605877b2a1cca67",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/notification_grpc.pb.go": {
+    "mtime": 1779546072.6564565,
+    "ast_hash": "fe76e4bc12e9223c5ecd1cbea84c80fd",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/router/provider_test.go": {
+    "mtime": 1779553482.9164228,
+    "ast_hash": "a3b1c6e180e213324fb9ddff32af7e44",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/router/provider.go": {
+    "mtime": 1779553459.8337026,
+    "ast_hash": "4cdfec84ef21cdca199e27917f3cee82",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/router/handler.go": {
+    "mtime": 1779553461.8919795,
+    "ast_hash": "9061ea6c11d852fdd3b1c7dc7addd052",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/worker/dispatcher.go": {
+    "mtime": 1779553486.9634252,
+    "ast_hash": "5a4ee426a28aef20b3eecca90fb85b15",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/worker/pool.go": {
+    "mtime": 1779552921.7230842,
+    "ast_hash": "03eeacba59e736c15d1c6d9ff94e8f37",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/worker/pool_test.go": {
+    "mtime": 1779553532.4644527,
+    "ast_hash": "a51c90262f92c668b58a19a11f14d25d",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/api/service.go": {
+    "mtime": 1779546245.1907856,
+    "ast_hash": "cff6335941d0640f8c3b77db33c665fd",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/internal/api/handler.go": {
+    "mtime": 1779546251.453798,
+    "ast_hash": "652d626c4be4ab91c7ca140c67dba5cd",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/cmd/router/main.go": {
+    "mtime": 1779553484.924424,
+    "ast_hash": "1e2252e038238ab32f8ba32d401da495",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/cmd/worker/main.go": {
+    "mtime": 1779553488.9984264,
+    "ast_hash": "e447cc78f90d35e5d86962d684f403c1",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/cmd/api/main.go": {
+    "mtime": 1779546253.4808018,
+    "ast_hash": "e384f09bd1946d91299b5d08ac948037",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/proto/notificationpb/notification.pb.go": {
+    "mtime": 1779546072.6564565,
+    "ast_hash": "cad4bbb010c369b3a605877b2a1cca67",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/proto/notificationpb/notification_grpc.pb.go": {
+    "mtime": 1779546072.6564565,
+    "ast_hash": "fe76e4bc12e9223c5ecd1cbea84c80fd",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/config/config.go": {
+    "mtime": 1779546215.5157275,
+    "ast_hash": "1348d18fe0edcd3b9e3803f89c710423",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/queue/dlq.go": {
+    "mtime": 1779553457.8134077,
+    "ast_hash": "e19a419c990cec85827b61121ad09fa0",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/queue/job.go": {
+    "mtime": 1779544998.116359,
+    "ast_hash": "05ca3e7b9f2aa10178ec7c32331887ed",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/queue/producer.go": {
+    "mtime": 1779546223.2377427,
+    "ast_hash": "f30899b28bf6d0340dc1c518dad5f8d9",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/queue/queue_test.go": {
+    "mtime": 1779552729.7659683,
+    "ast_hash": "f1c47d3c1bea7ad3f2d62fa9f87b53ef",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/queue/consumer.go": {
+    "mtime": 1779552936.463093,
+    "ast_hash": "bc23dbe0a71f5e6f40530798ebc1ba60",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/validator/validator.go": {
+    "mtime": 1779546218.945734,
+    "ast_hash": "ad5b323ce41c3bdd49f5b2f076f8cf7e",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/pkg/validator/validator_test.go": {
+    "mtime": 1779546220.9647381,
+    "ast_hash": "c2a709acaba5b76fc5cf3b8fbeb123f9",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/test/integration_test.go": {
+    "mtime": 1779546346.3769844,
+    "ast_hash": "be2b20dff9796d4463165bf208d63dd3",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/docker-compose.yml": {
+    "mtime": 1779545012.9425716,
+    "ast_hash": "25d4a5b55755f40a95045df4ab498764",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/learning_plan.md": {
+    "mtime": 1779584100.4715638,
+    "ast_hash": "5cd745c5e437fc6ca8c269715eaacf99",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/CHANGELOG.md": {
+    "mtime": 1779584098.4295175,
+    "ast_hash": "6f3962ede11af05894fd407cd969ef1c",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/README.md": {
+    "mtime": 1779556259.4389853,
+    "ast_hash": "f0c407e0e90d325fe1265f81de434f53",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/CLAUDE.md": {
+    "mtime": 1779544808.5007186,
+    "ast_hash": "bd8440cb9192f88fc243f8bc0e22d497",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/implementation_plan.md": {
+    "mtime": 1779545678.5949454,
+    "ast_hash": "4f4c04cd48f503ea7618f16569204cbd",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/task.md": {
+    "mtime": 1779553565.0464723,
+    "ast_hash": "a94ada31ada885444347a649dd704c78",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/.agents/architect.md": {
+    "mtime": 1779544843.989508,
+    "ast_hash": "9910957432c76bc5dcf38be1278b25d5",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/.agents/intern.md": {
+    "mtime": 1779544863.349088,
+    "ast_hash": "a69dfc4a67bcf05c6edc0a5db0aa33a1",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/.agents/developer.md": {
+    "mtime": 1779544850.1865728,
+    "ast_hash": "8167d2eb032c8b61c8a15e219d9cef64",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/.agents/reviewer.md": {
+    "mtime": 1779544856.9873765,
+    "ast_hash": "2ea15facddade40c30b7671ed4eba9cc",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/deployments/prometheus.yml": {
+    "mtime": 1779544996.09633,
+    "ast_hash": "1fe338a34e83326097b9b8fdb856aae0",
+    "semantic_hash": ""
+  },
+  "/home/nikhil/Documents/Coding/antigravity/notification-service/.rules/backend.md": {
+    "mtime": 1779544834.64941,
+    "ast_hash": "d8c11389e792dec60e45877838ee423b",
+    "semantic_hash": ""
+  }
+}
